@@ -1,109 +1,107 @@
 import { Injectable } from '@angular/core';
-import * as pdfMake from 'pdfmake/build/pdfmake';
-import * as pdfFonts from 'pdfmake/build/vfs_fonts';
-import { PDFDocument, rgb, PDFTextField, PDFCheckBox, PDFRadioGroup } from 'pdf-lib';
+import { PDFDocument, rgb, PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown } from 'pdf-lib';
+import { InputField } from '../interfaces/input-field';
+
 
 @Injectable({
   providedIn: 'root'
 })
 export class PdfService {
-  constructor() {
-    (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
-  }
+  constructor() {}
 
-  async generatePdf(formData: any) {
+  async generatePdf(inputFields: InputField[], formData: any) {
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([400, 400]); // Adding a new page
+    const page = pdfDoc.addPage([400, 400]);
     const form = pdfDoc.getForm();
-  
-    const { name, idNumber, gender, department, title, salary } = formData;
-  
-    // Add text fields
-    const textFieldWidth = 200;
-    const textFieldHeight = 30;
-    const textFieldX = 50; // Example horizontal position
-    const labelY = 350; // Example vertical position for labels
-    const inputFieldY = 320; // Example vertical position for input fields
-  
-    const fieldsData = [
-      { label: 'Name:', value: name, fieldName: 'name' },
-      { label: 'ID Number:', value: idNumber, fieldName: 'idNumber' },
-      { label: 'Gender:', value: gender, fieldName: 'gender' },
-      { label: 'Department:', value: department, fieldName: 'department' },
-      { label: 'Title:', value: title, fieldName: 'title' },
-      { label: 'Salary:', value: salary, fieldName: 'salary' },
-    ];
 
-    fieldsData.forEach(({ label, value, fieldName }, index) => {
+    const textFieldWidth = 200;
+    const textFieldHeight = 20;
+    const textFieldX = 50;
+    const labelY = 350;
+    const inputFieldY = 320;
+
+    inputFields.forEach(async (field, index) => {
       const inputFieldYOffset = inputFieldY - index * (textFieldHeight + 25);
       const labelYOffset = labelY - index * (textFieldHeight + 25);
 
-      // Add label
-      page.drawText(label, { x: textFieldX, y: labelYOffset });
+      page.drawText(field.label, { x: textFieldX, y: labelYOffset, size: 10 });
 
-      // Add text field
-      const textField = form.createTextField(fieldName);
-      textField.setText(value);
-      textField.addToPage(page, {
-        textColor: rgb(0, 0, 0),
-        backgroundColor: rgb(1, 1, 1),
-        borderColor: rgb(0, 0, 0),
-        borderWidth: 1,
-        x: textFieldX,
-        y: inputFieldYOffset,
-        width: textFieldWidth,
-        height: textFieldHeight,
-      });
+      if (field.type === 'text' || field.type === 'email' || field.type === 'number' || field.type === 'range' || field.type === 'date') {
+        const textField = form.createTextField(field.fieldName);
+        textField.setText(formData[field.fieldName]?.toString() || '');
+        textField.addToPage(page, {
+          textColor: rgb(0, 0, 0),
+          backgroundColor: rgb(1, 1, 1),
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 1,
+          x: textFieldX,
+          y: inputFieldYOffset,
+          width: textFieldWidth,
+          height: textFieldHeight,
+        });
+      } else if (field.type === 'select') {
+        const selectField = form.createDropdown(field.fieldName);
+        selectField.setOptions(field.options || []);
+        selectField.select(formData[field.fieldName] || '');
+        selectField.addToPage(page, {
+          textColor: rgb(0, 0, 0),
+          backgroundColor: rgb(1, 1, 1),
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 1,
+          x: textFieldX,
+          y: inputFieldYOffset,
+          width: textFieldWidth,
+          height: textFieldHeight,
+        });
+      } else if (field.type === 'radio') {
+        const radioGroup = form.createRadioGroup(field.fieldName);
+        (field.options || []).forEach((option, optionIndex) => {
+          radioGroup.addOptionToPage(option, page, {
+            x: textFieldX + (optionIndex * 70),
+            y: inputFieldYOffset,
+            width: 10,
+            height: 10,
+            textColor: rgb(0, 0, 0),
+            backgroundColor: rgb(1, 1, 1),
+            borderColor: rgb(0, 0, 0),
+            borderWidth: 1,
+          });
+          if (option === formData[field.fieldName]) {
+            radioGroup.select(option);
+          }
+          page.drawText(option, { x: textFieldX + (optionIndex * 70) + 20, y: inputFieldYOffset + 5 });
+        });
+      } else if (field.type === 'checkbox') {
+        const checkboxField = form.createCheckBox(field.fieldName);
+        if (formData[field.fieldName]) {
+          checkboxField.check();
+        } else {
+          checkboxField.uncheck();
+        }
+        checkboxField.addToPage(page, {
+          x: textFieldX,
+          y: inputFieldYOffset,
+          width: textFieldWidth,
+          height: textFieldHeight,
+        });
+      } else if (field.type === 'image') {
+        const imageData = formData[field.fieldName];
+        if (imageData) {
+          const image = await pdfDoc.embedPng(imageData);
+          page.drawImage(image, {
+            x: textFieldX,
+            y: inputFieldYOffset - 50,
+            width: textFieldWidth,
+            height: textFieldHeight + 50,
+          });
+        }
+      }
     });
-
-  
-    // Add other text fields similarly...
-  
-    // Add a button to save the form
-    // const saveButtonWidth = 100;
-    // const saveButtonHeight = 30;
-    // const saveButtonY = 50;
-  
-    // page.drawRectangle({
-    //   x: 150,
-    //   y: saveButtonY,
-    //   width: saveButtonWidth,
-    //   height: saveButtonHeight,
-    //   borderColor: rgb(0, 0, 1),
-    //   borderWidth: 1,
-    //   color: rgb(0, 0, 1),
-    // });
-  
-    // const buttonText = 'Save';
-    // const buttonTextWidth = 50; // Manually specify button text width
-    // page.drawText(buttonText, {
-    //   x: 150 + (saveButtonWidth - buttonTextWidth) / 2,
-    //   y: saveButtonY + (saveButtonHeight - 12) / 2,
-    //   size: 12,
-    //   color: rgb(1, 1, 1),
-    // });
-
-//     const saveButtonField = form.createButton('saveButton');
-//     const pageIndex = pdfDoc.getPageIndex(page);
-
-// // Add the button to the page using its index
-// saveButtonField.addToPage(pageIndex, {
-//   color: rgb(1, 1, 1),
-//   backgroundColor: rgb(0, 0, 255),
-//   borderColor: rgb(0, 0, 255),
-//   borderWidth: 1,
-//   x: 150,
-//   y: saveButtonY,
-//   width: saveButtonWidth,
-//   height: saveButtonHeight,
-// });
-
 
     const pdfBytes = await pdfDoc.save();
     this.downloadPdf(pdfBytes);
   }
 
-  
   downloadPdf(pdfBytes: Uint8Array) {
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     const link = document.createElement('a');
@@ -112,47 +110,49 @@ export class PdfService {
     link.click();
   }
 
-  async parsePdf(uploadedFile: File) {
-  const reader = new FileReader();
-  reader.onload = async (event) => {
-    if (!event.target) {
-      console.error('Error: event.target is null');
-      return;
-    }
-
-    const buffer = event.target.result as ArrayBuffer;
-
-    try {
-      // Load the PDF file
-      const pdfDoc = await PDFDocument.load(new Uint8Array(buffer));
-
-      // Extract form field data
-      const formData: any = {};
-
-      for (const [fieldName, field] of Object.entries(pdfDoc.getForm().getFields())) {
-        // Check the type of the field and get its value accordingly
-        if (field instanceof PDFTextField) {
-          formData[fieldName] = field.getText() || ''; // For text fields
-        } else if (field instanceof PDFCheckBox) {
-          formData[fieldName] = field.isChecked(); // For check boxes
-        } else if (field instanceof PDFRadioGroup) {
-          formData[fieldName] = field.getSelected(); // For radio groups
-        } else {
-          // Handle other field types as needed
-          formData[fieldName] = ''; // For unsupported field types
+  async parsePdf(uploadedFile: File): Promise<any> {
+    return new Promise<any>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        if (!event.target) {
+          reject('Error: event.target is null');
+          return;
         }
-      }
-
-      console.log(formData);
-      // Here you can populate your form fields with formData
-    } catch (error) {
-      console.error('Error loading PDF file:', error);
-    }
-  };
-  reader.readAsArrayBuffer(uploadedFile);
+  
+        const buffer = event.target.result as ArrayBuffer;
+  
+        try {
+          // Load the PDF file
+          const pdfDoc = await PDFDocument.load(new Uint8Array(buffer));
+          
+          // Extract form field data
+          const formData: any = {};
+  
+          for (const [fieldName, field] of Object.entries(pdfDoc.getForm().getFields())) {
+            if (field instanceof PDFTextField) {
+              formData[fieldName] = field.getText() || '';
+            } else if (field instanceof PDFCheckBox) {
+              formData[fieldName] = field.isChecked();
+            } else if (field instanceof PDFRadioGroup) {
+              const selectedOption = field.getSelected();
+              if (selectedOption) {
+                formData[fieldName] = selectedOption;
+              } else {
+                formData[fieldName] = ''; // If no option is selected
+              }
+            } else {
+              formData[fieldName] = ''; // For unsupported field types
+            }
+          }
+  
+          resolve(formData);
+        } catch (error) {
+          reject('Error loading PDF file: ' + error);
+        }
+      };
+      reader.readAsArrayBuffer(uploadedFile);
+    });
+  }
+  
 }
 
-  
-  
-  
-}

@@ -1,5 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { PdfService } from '../services/pdf-service.service'; 
+import { PDFDocument, PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown } from 'pdf-lib';
+
 import { InputField } from '../interfaces/input-field';
 
 @Component({
@@ -7,58 +10,61 @@ import { InputField } from '../interfaces/input-field';
   templateUrl: './employee-form.component.html',
   styleUrls: ['./employee-form.component.css']
 })
-export class EmployeeFormComponent {
-  inputFields: InputField[] = [
-    { label: 'Name', fieldName: 'name', type: 'text' },
-    { label: 'ID Number', fieldName: 'idNumber', type: 'text' },
-    { label: 'Gender', fieldName: 'gender', type: 'radio', options: ['Male', 'Female', 'Other'] },
-    { label: 'Department', fieldName: 'department', type: 'select', options: ['HR', 'Finance', 'Engineering', 'Sales'] },
-    { label: 'Title', fieldName: 'title', type: 'text' },
-    { label: 'Salary', fieldName: 'salary', type: 'number' },
-    { label: 'Date of Joining', fieldName: 'dateOfJoining', type: 'date' },
-    { label: 'Email', fieldName: 'email', type: 'email' },
-    { label: 'Age', fieldName: 'age', type: 'number' },
-    { label: 'Active Employee', fieldName: 'activeEmployee', type: 'checkbox' }
-  ];
+export class EmployeeFormComponent implements OnInit {
+  form: FormGroup;
+  formSchema: any[] = [];
 
-  formData: any = {};
-
-  constructor(private pdfService: PdfService) {}
-
-  generatePdf() {
-    this.pdfService.generatePdf(this.inputFields, this.formData);
+  constructor(private fb: FormBuilder, private pdfService: PdfService) {
+    this.form = this.fb.group({});
   }
 
-  parsePdf(event: any) {
-    const uploadedFile = event.target.files[0];
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      if (!event.target) {
-        console.error('Error: event.target is null');
-        return;
-      }
+  ngOnInit() {
+    // Define the form schema
+    this.formSchema = [
+      { type: 'text', label: 'Name', name: 'name' },
+      { type: 'text', label: 'ID Number', name: 'idNumber' },
+      { type: 'radio', label: 'Gender', name: 'gender', options: ['Male', 'Female', 'Other'] },
+      { type: 'select', label: 'Department', name: 'department', options: ['QA', 'DEV', 'ANALYST', 'SCRUM', 'FEATURE'] },
+      { type: 'text', label: 'Title', name: 'title' },
+      { type: 'number', label: 'Salary', name: 'salary' },
+      // Add more fields as needed
+    ];
 
-      const buffer = event.target.result as ArrayBuffer;
-
-      try {
-        // Load the PDF file
-        const formData = await this.pdfService.parsePdf(uploadedFile);
-        this.formData = formData;
-      } catch (error) {
-        console.error('Error loading PDF file:', error);
+    // Dynamically create form controls based on the schema
+    const formControls: any = {};
+    this.formSchema.forEach(field => {
+      if (field.type === 'radio' || field.type === 'select') {
+        formControls[field.name] = [field.options[0], Validators.required];
+      } else {
+        formControls[field.name] = ['', Validators.required];
       }
-    };
-    reader.readAsArrayBuffer(uploadedFile);
+    });
+
+    this.form = this.fb.group(formControls);
   }
 
-  handleImageUpload(event: Event, fieldName: string) {
-    const fileInput = event.target as HTMLInputElement;
-    if (fileInput.files && fileInput.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.formData[fieldName] = e.target?.result;
-      };
-      reader.readAsDataURL(fileInput.files[0]);
+  async generatePdf() {
+    const formData = this.form.value;
+    await this.pdfService.generatePdf(formData, this.formSchema);
+  }
+
+  async onFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const formData = await this.pdfService.parsePdf(input.files[0], this.formSchema);
+      this.form.patchValue(formData);
     }
   }
+
+  onImageChange(event: Event, fieldName: string) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.form.controls[fieldName].setValue(reader.result);
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
 }

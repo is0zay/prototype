@@ -1,43 +1,23 @@
-<!-- employee-form.component.html -->
-
-<div *ngFor="let field of inputFields">
-  <label>{{ field.label }}</label>
-
-  <input *ngIf="['text', 'email', 'number', 'range', 'date'].includes(field.type)" 
-         [type]="field.type" 
-         [(ngModel)]="formData[field.fieldName]" 
-         name="{{ field.fieldName }}">
-  
-  <select *ngIf="field.type === 'select'" 
-          [(ngModel)]="formData[field.fieldName]" 
-          name="{{ field.fieldName }}">
-    <option *ngFor="let option of field.options" [value]="option">{{ option }}</option>
-  </select>
-
-  <div *ngIf="field.type === 'radio'">
-    <label *ngFor="let option of field.options">
-      <input type="radio" 
-             [value]="option" 
-             [(ngModel)]="formData[field.fieldName]" 
-             name="{{ field.fieldName }}">
-      {{ option }}
-    </label>
+<form [formGroup]="form" (ngSubmit)="generatePdf()">
+  <div *ngFor="let field of formSchema">
+    <label>{{ field.label }}</label>
+    <div [ngSwitch]="field.type">
+      <input *ngSwitchCase="'text'" [formControlName]="field.name" type="text" />
+      <input *ngSwitchCase="'number'" [formControlName]="field.name" type="number" />
+      <input *ngSwitchCase="'email'" [formControlName]="field.name" type="email" />
+      <input *ngSwitchCase="'date'" [formControlName]="field.name" type="date" />
+      <input *ngSwitchCase="'range'" [formControlName]="field.name" type="range" />
+      <select *ngSwitchCase="'select'" [formControlName]="field.name">
+        <option *ngFor="let option of field.options" [value]="option">{{ option }}</option>
+      </select>
+      <div *ngSwitchCase="'radio'">
+        <label *ngFor="let option of field.options">
+          <input type="radio" [formControlName]="field.name" [value]="option" /> {{ option }}
+        </label>
+      </div>
+      <input *ngSwitchCase="'checkbox'" [formControlName]="field.name" type="checkbox" />
+    </div>
   </div>
-
-  <input *ngIf="field.type === 'checkbox'" 
-         type="checkbox" 
-         [(ngModel)]="formData[field.fieldName]" 
-         name="{{ field.fieldName }}">
-
-  <input *ngIf="field.type === 'image'" 
-         type="file" 
-         (change)="handleImageUpload($event, field.fieldName)">
-
-  <img *ngIf="field.type === 'image' && formData[field.fieldName]" 
-       [src]="formData[field.fieldName]" 
-       alt="{{ field.label }}" 
-       style="max-width: 200px; max-height: 200px;">
-</div>
-
-<button (click)="generatePdf()">Generate PDF</button>
-<input type="file" (change)="parsePdf($event)">
+  <button type="submit">Generate PDF</button>
+</form>
+<input type="file" (change)="onFileChange($event)" />

@@ -1,0 +1,46 @@
+[{
+        "sessionId": 1,
+        "teamId": 45,
+        "scoreInfo": [{
+                "criteriaId": 1,
+                "score": 3,
+            }, {
+                "criteriaId": 2,
+                "score": 2,
+            }, {
+                "criteriaId": 3,
+                "score": 5,
+            }, {
+                "criteriaId": 4,
+                "score": 3,
+            }, {
+                "criteriaId": 5,
+                "score": 3,
+            }
+        ],
+        "commentsTxt": "awesome idea",
+        "judgesChoice": "N"
+    }, {
+        "sessionId": 1,
+        "teamId": 45,
+        "scoreInfo": [{
+                "criteriaId": 1,
+                "score": 3,
+            }, {
+                "criteriaId": 2,
+                "score": 2,
+            }, {
+                "criteriaId": 3,
+                "score": 5,
+            }, {
+                "criteriaId": 4,
+                "score": 3,
+            }, {
+                "criteriaId": 5,
+                "score": 3,
+            }
+        ],
+        "commentsTxt": "awesome idea",
+        "judgesChoice": "N"
+    }
+]

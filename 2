@@ -1,0 +1,40 @@
+import io.jsonwebtoken.Claims;
+
+import javax.servlet.*;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+
+public class JwtAuthFilter implements Filter {
+
+    private final JwtUtil jwtUtil;
+
+    public JwtAuthFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        HttpServletRequest httpRequest = (HttpServletRequest) servletRequest;
+        String token = extractTokenFromRequest(httpRequest);
+
+        if (token != null && jwtUtil.validateToken(token)) {
+            String username = jwtUtil.getClaimFromToken(token, Claims::getSubject);
+            httpRequest.setAttribute("username", username);
+        }
+
+        filterChain.doFilter(servletRequest, servletResponse);
+    }
+
+    private String extractTokenFromRequest(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals("jwt_token")) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
+}

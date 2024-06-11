@@ -89,15 +89,33 @@ public class Dto {
     }
 
 
+@Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        String jwtToken = null;
 
- HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if (cookie.getName().equals("jwt_token")) {
-                    String token = cookie.getValue();
-                    return jwtUtil.extractUsername(token);
+                if ("jwt_token".equals(cookie.getName())) {
+                    jwtToken = cookie.getValue();
                 }
             }
         }
-        return null;
+
+        if (jwtToken != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            String username = jwtUtil.extractUsername(jwtToken);
+
+            if (username != null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                if (jwtUtil.validateToken(jwtToken, userDetails.getUsername())) {
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }

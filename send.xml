@@ -43,38 +43,37 @@
 
 
 
-    @Autowired
-    private JWTUtil jwtUtil;
+   
+public class Dto {
+    private int sessionId;
+    private int teamId;
+    private String teamName;
+    private String contactName;
+    private LocalDateTime sessionDate;
+    private String ideaCategory;
+    private BigDecimal scoreOne;
+    private BigDecimal scoreTwo;
+    private BigDecimal scoreThree;
+    private BigDecimal scoreFour;
+    private BigDecimal scoreFive;
+    private BigDecimal scoreSix;
+    private BigDecimal scoreSeven;
+    private String sessionStatus;
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.csrf().disable()
-                .authorizeRequests()
-                .antMatchers("/api/auth/**").permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .addFilterBefore(new JWTFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
-    }
+// getters setters etc
 }
 
-// JWTFilter for validating the JWT token
-class JWTFilter extends OncePerRequestFilter {
-    private final JWTUtil jwtUtil;
 
-    public JWTFilter(JWTUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
-    }
 
-    @Override
+
+@Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
+        String token = extractTokenFromCookie(request);
+        if (token != null && jwtUtil.validateToken(token)) {
             String username = jwtUtil.extractUsername(token);
-            if (username != null && jwtUtil.validateToken(token, username)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
+            UserDetails userDetails = new User(username, "", Collections.emptyList());
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(authToken);
         }
         filterChain.doFilter(request, response);
-    }

@@ -1,0 +1,17 @@
+String cookieValue = getCookieValue(request, "jwt_auth");
+    if (cookieValue != null) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, String> authData = objectMapper.readValue(cookieValue, Map.class);
+
+        String token = authData.get("token");
+        String username = authData.get("username");
+
+        // Verify the token and extract the username
+        Claims claims = jwtUtil.extractAllClaims(token.replace("Bearer ", ""));
+        String usernameFromToken = claims.getSubject();
+
+        if (username.equals(usernameFromToken)) {
+            // Create an Authentication object
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(username, null, null);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }

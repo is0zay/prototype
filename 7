@@ -1,0 +1,22 @@
+public String getCurrentUsername() {
+    // First, try to get the username from the SecurityContextHolder
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication != null) {
+        return authentication.getName();
+    }
+
+    // If the SecurityContextHolder doesn't have the username, try to get it from the cookie
+    String cookieValue = getCookieValue("jwt_auth");
+    if (cookieValue != null) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            Map<String, String> authData = objectMapper.readValue(cookieValue, Map.class);
+            return authData.get("username");
+        } catch (JsonProcessingException e) {
+            // Handle the exception appropriately
+            e.printStackTrace();
+        }
+    }
+
+    return null;
+}

@@ -1,0 +1,33 @@
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final String JWT_TOKEN_COOKIE_NAME = "jwt_token";
+    private static final String USERNAME_COOKIE_NAME = "username";
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+
+        String token = getCookieValue(request, JWT_TOKEN_COOKIE_NAME);
+        String username = getCookieValue(request, USERNAME_COOKIE_NAME);
+
+        if (token != null && username != null) {
+            // Verify the token and create an Authentication object
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(username, null, null);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+
+        filterChain.doFilter(request, response);
+    }
+
+    private String getCookieValue(HttpServletRequest request, String cookieName) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals(cookieName)) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
+}

@@ -23,3 +23,59 @@ public String getCurrentUsername() {
 
 
 value = { "/", "/{x:[\\w\\-]+}", "/**/{x:[\\w\\-]+}" })
+
+
+<label for="name">Name:</label>
+  <input type="text" id="name" formControlName="name" required><br><br>
+
+  <label for="email">Email:</label>
+  <input type="email" id="email" formControlName="email" required><br><br>
+
+  <label for="password">Password:</label>
+  <input type="password" id="password" formControlName="password" required><br><br>
+
+  <label for="age">Age:</label>
+  <input type="number" id="age" formControlName="age" min="0" max="120"><br><br>
+
+  <label for="birthdate">Birthdate:</label>
+  <input type="date" id="birthdate" formControlName="birthdate"><br><br>
+
+  <label for="favorite-color">Favorite Color:</label>
+  <input type="color" id="favorite-color" formControlName="favoriteColor"><br><br>
+
+  <label for="satisfaction">Satisfaction Level:</label>
+  <input type="range" id="satisfaction" formControlName="satisfaction" min="0" max="10"><br><br>
+
+  <label>Gender:</label><br>
+  <input type="radio" id="male" formControlName="gender" value="male">
+  <label for="male">Male</label><br>
+  <input type="radio" id="female" formControlName="gender" value="female">
+  <label for="female">Female</label><br>
+  <input type="radio" id="other" formControlName="gender" value="other">
+  <label for="other">Other</label><br><br>
+
+  <label>Interests:</label><br>
+  <input type="checkbox" id="sports" formControlName="interests" value="sports">
+  <label for="sports">Sports</label><br>
+  <input type="checkbox" id="music" formControlName="interests" value="music">
+  <label for="music">Music</label><br>
+  <input type="checkbox" id="reading" formControlName="interests" value="reading">
+  <label for="reading">Reading</label><br><br>
+
+  <label for="country">Country:</label>
+  <select id="country" formControlName="country">
+    <option value="">Select a country</option>
+    <option value="usa">United States</option>
+    <option value="uk">United Kingdom</option>
+    <option value="canada">Canada</option>
+    <option value="australia">Australia</option>
+  </select><br><br>
+
+  <label for="comments">Comments:</label><br>
+  <textarea id="comments" formControlName="comments" rows="4" cols="50"></textarea><br><br>
+
+  <button type="submit">Submit</button>
+  <button type="button" (click)="resetForm()">Reset</button>
+
+  <button type="button" (click)="generatePdf()">Generate PDF</button>
+  <input type="file" (change)="parsePdf($event.target.files)" />

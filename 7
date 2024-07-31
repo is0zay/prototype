@@ -79,3 +79,127 @@ value = { "/", "/{x:[\\w\\-]+}", "/**/{x:[\\w\\-]+}" })
 
   <button type="button" (click)="generatePdf()">Generate PDF</button>
   <input type="file" (change)="parsePdf($event.target.files)" />
+
+
+
+  constructor(private fb: FormBuilder, private pdfService: PdfService) {
+    this.form = this.fb.group({
+      name: ['', Validators.required],
+      email: ['', Validators.required],
+      password: ['', Validators.required],
+      age: [''],
+      birthdate: [''],
+      favoriteColor: [''],
+      satisfaction: [''],
+      gender: [''],
+      interests: [''],
+      country: [''],
+      comments: ['']
+    });
+  }
+
+  ngOnInit(): void {}
+
+  onSubmit() {
+    console.log(this.form.value);
+  }
+
+  resetForm() {
+    this.form.reset();
+  }
+
+  async generatePdf() {
+    const formData = this.form.value;
+    await this.pdfService.generatePdf(formData, this.formSchema);
+  }
+
+  async parsePdf(files: FileList | null) {
+    if (files && files.length > 0) {
+      const formData = await this.pdfService.parsePdf(files[0]);
+      this.form.patchValue(formData);
+    }
+  }
+
+  // Define the form schema
+  formSchema = [
+    { type: 'text', label: 'Name', name: 'name' },
+    { type: 'email', label: 'Email', name: 'email' },
+    { type: 'password', label: 'Password', name: 'password' },
+    { type: 'number', label: 'Age', name: 'age' },
+    { type: 'date', label: 'Birthdate', name: 'birthdate' },
+    { type: 'color', label: 'Favorite Color', name: 'favoriteColor' },
+    { type: 'range', label: 'Satisfaction Level', name: 'satisfaction' },
+    { type: 'radio', label: 'Gender', name: 'gender', options: ['male', 'female', 'other'] },
+    { type: 'checkbox', label: 'Interests', name: 'interests', options: ['sports', 'music', 'reading'] },
+    { type: 'select', label: 'Country', name: 'country', options: ['usa', 'uk', 'canada', 'australia'] },
+    { type: 'textarea', label: 'Comments', name: 'comments' }
+  ];
+}
+Step 3: PDF Service
+Ensure the pdf.service.ts file exists and contains the necessary logic:
+
+typescript
+Copy code
+// pdf.service.ts
+import { Injectable } from '@angular/core';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { HttpClient } from '@angular/common/http';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class PdfService {
+  constructor(private http: HttpClient) {}
+
+  async generatePdf(formData: any, formSchema: any[]): Promise<Uint8Array> {
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const { height } = page.getSize();
+
+    let yPosition = height - 30;
+    formSchema.forEach(field => {
+      page.drawText(`${field.label}: ${formData[field.name]}`, {
+        x: 30,
+        y: yPosition,
+        size: 12,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      yPosition -= 20;
+    });
+
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'form.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+    return pdfBytes;
+  }
+
+  async parsePdf(file: File): Promise<any> {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer);
+    const form = pdfDoc.getForm();
+    const formFields = form.getFields();
+    const formData: any = {};
+
+    formFields.forEach(field => {
+      const fieldName = field.getName();
+      if (field.constructor.name === 'PDFTextField') {
+        formData[fieldName] = (field as any).getText();
+      } else if (field.constructor.name === 'PDFCheckBox') {
+        formData[fieldName] = (field as any).isChecked();
+      } else if (field.constructor.name === 'PDFRadioGroup') {
+        formData[fieldName] = (field as any).getSelected();
+      } else if (field.constructor.name === 'PDFDropdown') {
+        formData[fieldName] = (field as any).getSelected();
+      }
+    });
+
+    return formData;
+  }
+}

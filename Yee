@@ -1,0 +1,1 @@
+sed -i "s|\"entitledServIds\": \"\[\{'servId':'AAT_1234_EXMP','servAccounts':'EXMPID'\\}\\]\"|\"entitledServIds\": \"\[\{'servId':'AAT_1234_EXMP', 'servAccounts':'$new_servAccount'\\}\\]\"|g" "$json_path"

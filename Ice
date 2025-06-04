@@ -1,0 +1,78 @@
+%dw 2.0
+output application/json
+---
+{
+    "filterqueries": if (payload.columnFilters == null and payload.globalDateBegin == null) []
+    else [
+        {
+            "bool": {
+                "must": flatten([
+                    // Alternative 5: Direct iteration approach instead of some
+                    do {
+                        var hasMultiValue = do {
+                            var columns = keysOf(payload.columnFilters.filters default {})
+                            var checkColumns = columns map (col) -> sizeOf(payload.columnFilters.filters[col] default []) > 1
+                            ---
+                            checkColumns contains true
+                        }
+                        ---
+                        if (payload.columnFilters != null and hasMultiValue)
+                            {
+                                "bool": {
+                                    "should": flatten([
+                                        if (payload.columnFilters != null)
+                                            flatten(
+                                                keysOf(payload.columnFilters.filters default {}) map (columnName) ->
+                                                    if (sizeOf(payload.columnFilters.filters[columnName] default []) > 1)
+                                                        (payload.columnFilters.filters[columnName] default [] map (value) -> {
+                                                            "match": {
+                                                                (columnName match {
+                                                                    case "planReportId" -> "planReportId.keyword"
+                                                                    case "planId" -> "planId.keyword"
+                                                                    else -> columnName
+                                                                }): value
+                                                            }
+                                                        })
+                                                    else []
+                                            )
+                                        else []
+                                    ])
+                                }
+                            }
+                        else null
+                    },
+                    
+                    // Single value filters
+                    if (payload.columnFilters != null)
+                        flatten(
+                            keysOf(payload.columnFilters.filters default {}) map (columnName) ->
+                                if (sizeOf(payload.columnFilters.filters[columnName] default []) == 1)
+                                    (payload.columnFilters.filters[columnName] default [] map (value) -> {
+                                        "match": {
+                                            (columnName match {
+                                                case "planReportId" -> "planReportId.keyword"
+                                                case "planId" -> "planId.keyword"
+                                                else -> columnName
+                                            }): value
+                                        }
+                                    })
+                                else []
+                        )
+                    else [],
+                    
+                    // Date range using filterObject
+                    if (payload.globalDateBegin != null or payload.globalDateEnd != null)
+                        [{
+                            "range": {
+                                "planStartDt": {
+                                    ("gte": payload.globalDateBegin),
+                                    ("lte": payload.globalDateEnd)
+                                } filterObject ((value, key) -> value != null)
+                            }
+                        }]
+                    else []
+                ]) filter ($ != null and $ != [])
+            }
+        }
+    ]
+}

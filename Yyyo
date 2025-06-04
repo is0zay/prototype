@@ -1,0 +1,55 @@
+%dw 2.0
+output application/json
+var filters = payload.columnFilters.filters
+---
+{
+  id: "t-searchtemplate",
+  params: {
+    from: 0,
+    size: payload.paging.pageSize,
+    _source: [],
+    sort: [
+      {
+        (payload.paging.sortBy ++ ".keyword"): payload.paging.orderBy
+      }
+    ],
+    matchqueries: [],
+    filterqueries: [
+      {
+        bool: {
+          must: flatten(
+            filters mapObject (values, columnName) ->
+              if (isArray(values) and sizeOf(values) > 1) do {
+                // Multiple values for a column = use "should"
+                shouldMatch: {
+                  bool: {
+                    should: values map (v) -> {
+                      match: {
+                        (columnName): v
+                      }
+                    }
+                  }
+                }
+              } else {
+                // Single value = use "match" directly in must
+                matchOnly: values map (v) -> {
+                  match: {
+                    (columnName): v
+                  }
+                }
+              }
+          ) ++ [
+            {
+              range: {
+                planStartDt: {
+                  gte: payload.globalDateBegin
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    termaggs: {}
+  }
+}

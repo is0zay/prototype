@@ -1,0 +1,66 @@
+{
+    "filterqueries": if(payload.columnFilters == null and payload.globalDateBegin == null) []
+    else [
+        {
+            "bool": {
+                "must": flatten([
+                    {
+                        "bool": {
+                            "should": flatten([
+                                // Column filters with multiple values
+                                if(payload.columnFilters != null)
+                                    flatten(
+                                        keysOf(payload.columnFilters.filters default {}) map (columnName) ->
+                                            if (sizeOf(payload.columnFilters.filters[columnName] default []) > 1)
+                                                (payload.columnFilters.filters[columnName] default [] map (value) -> {
+                                                    "match": {
+                                                        (columnName match {
+                                                            case "placeReportId" -> "placeReportId.keyword"
+                                                            case "placeId" -> "placeId.keyword"
+                                                            else -> columnName
+                                                        }): value
+                                                    }
+                                                })
+                                            else []
+                                    )
+                                else []
+                            ])
+                        }
+                    } when (payload.columnFilters != null and 
+                            keysOf(payload.columnFilters.filters default {}) 
+                            some (columnName) -> sizeOf(payload.columnFilters.filters[columnName] default []) > 1),
+                    
+                    // Single value filters
+                    if(payload.columnFilters != null)
+                        flatten(
+                            keysOf(payload.columnFilters.filters default {}) map (columnName) ->
+                                if (sizeOf(payload.columnFilters.filters[columnName] default []) == 1)
+                                    (payload.columnFilters.filters[columnName] default [] map (value) -> {
+                                        "match": {
+                                            (columnName match {
+                                                case "placeReportId" -> "placeReportId.keyword"
+                                                case "placeId" -> "placeId.keyword"
+                                                else -> columnName
+                                            }): value
+                                        }
+                                    })
+                                else []
+                        )
+                    else [],
+                    
+                    // Date range query
+                    if(payload.globalDateBegin != null or payload.globalDateEnd != null)
+                        [{
+                            "range": {
+                                "planStartDate": ({
+                                    ("gte": payload.globalDateBegin) when (payload.globalDateBegin != null),
+                                    ("lte": payload.globalDateEnd) when (payload.globalDateEnd != null)
+                                } filterObject ((value, key) -> value != null))
+                            }
+                        }]
+                    else []
+                ]) filter ($ != null and $ != [])
+            }
+        }
+    ]
+}

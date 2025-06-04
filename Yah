@@ -1,0 +1,63 @@
+I see! So "should" and "must" should be arrays containing match objects, and "must" should only contain the "range" object when the date condition is met. Here's the corrected full code:
+
+```javascript
+{
+  "bool": {
+    "should": flatten([
+      // Column filters with multiple values
+      (if(payload.columnFilters != null)
+        flatten(
+          keysOf(payload.columnFilters.filters default {}) map (columnName) ->
+            if (payload.columnFilters.filters[columnName].length > 1)
+              (payload.columnFilters.filters[columnName] default []) map (value) -> {
+                "match": { 
+                  (columnName match {
+                    case "planReportId" -> "planReportId.keyword"
+                    case "planId" -> "planId.keyword" 
+                    else -> columnName
+                  }): value 
+                }
+              }
+            else []
+        )
+      else [])
+    ]),
+    
+    "must": flatten([
+      // Column filters with single values
+      (if(payload.columnFilters != null)
+        flatten(
+          keysOf(payload.columnFilters.filters default {}) map (columnName) ->
+            if (payload.columnFilters.filters[columnName].length == 1)
+              (payload.columnFilters.filters[columnName] default []) map (value) -> {
+                "match": { 
+                  (columnName match {
+                    case "planReportId" -> "planReportId.keyword"
+                    case "planId" -> "planId.keyword" 
+                    else -> columnName
+                  }): value 
+                }
+              }
+            else []
+        )
+      else []),
+      
+      // Date range logic
+      (if(payload.globalDateBegin != null or payload.globalDateEnd != null)
+        [{
+          "range": {
+            "planStartDt": {
+              "gte": payload.globalDateBegin[0] default payload.globalDateBegin,
+              "lte": payload.globalDateBegin[1] default payload.globalDateEnd
+            }
+          }
+        }]
+      else [])
+    ])
+  }
+}
+```
+
+Now:
+- "should" is an array containing "match" objects for multi-value column filters
+- "must" is an array containing "match" objects for single-value column filters AND the "range" object (when date conditions are met)

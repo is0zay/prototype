@@ -1,0 +1,60 @@
+%dw 2.0
+output application/json
+var filters = payload.columnFilters.filters
+---
+{
+  id: "t-searchtemplate",
+  params: {
+    from: 0,
+    size: payload.paging.pageSize,
+    _source: [],
+    sort: [
+      {
+        (payload.paging.sortBy ++ ".keyword"): payload.paging.orderBy
+      }
+    ],
+    matchqueries: [],
+    filterqueries: [
+      {
+        bool: {
+          must: flatten([
+            // Handle businessSegments with `should`
+            if (filters.businessSegments? and sizeOf(filters.businessSegments) > 0)
+              [{
+                bool: {
+                  should: filters.businessSegments map (seg) -> {
+                    match: {
+                      businessSegments: seg
+                    }
+                  }
+                }
+              }]
+            else [],
+
+            // Handle other dynamic filters
+            filters filterObject ((v, k) -> k != "businessSegments") 
+                   mapObject ((v, k) -> 
+                     v map ((val) -> {
+                       match: {
+                         (k): val
+                       }
+                     })
+                   ) 
+                   values 
+                   flatten(),
+
+            // Add planStartDt range filter
+            {
+              range: {
+                planStartDt: {
+                  gte: payload.globalDateBegin
+                }
+              }
+            }
+          ])
+        }
+      }
+    ],
+    termaggs: {}
+  }
+}
